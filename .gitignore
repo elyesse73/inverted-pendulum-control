@@ -1,0 +1,18 @@
+# MATLAB & Simulink generated artifacts
+slprj/
+*.asv
+*.autosave
+*.slxc
+*.mex*
+*.mat~
+
+# Arduino IDE / Theia / PlatformIO
+.theia/
+.pio/
+build/
+
+# OS & Editors
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
