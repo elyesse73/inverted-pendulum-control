@@ -4,7 +4,7 @@
 
 Developed as part of the Mechatronics & Control Engineering project (TRO25-GR6) at **Mines Paris -- PSL**.
 
-> **Team & Scope Note:** Mechanical CAD design and 3D-printed chassis manufacturing were completed by teammates within the 5-student group (B. Gutierrez, E. Benyeloul, F. Lafitte, J. Buisson, V. Bourgade). This repository focuses on **control engineering, state estimation, MATLAB/Simulink modeling, motor system identification, and real-time embedded firmware**.
+> **Team & Scope Note:** Mechanical CAD design and 3D-printed chassis manufacturing were completed by teammates within our engineering project group. This repository focuses on **control engineering, state estimation, MATLAB/Simulink modeling, motor system identification, and real-time embedded firmware**.
 
 ---
 
@@ -14,7 +14,7 @@ A two-wheeled Segway-type robot is a naturally unstable, underactuated inverted 
 
 1. **Modeling & Model-Order Reduction:** Coupled nonlinear equations of motion linearized around the unstable vertical equilibrium ($\theta = 0$), with **singular perturbation reduction** eliminating fast motor electrical dynamics ($L/R \sim \text{ms}$ vs. mechanical timescales $\sim 100\text{ ms}$).
 2. **System Identification:** On-board 6-regime excitation generator (step, square, sine, sawtooth, 0.2--3.0 Hz chirp, and 16-bit LFSR PRBS) paired with continuous-time 2nd-order transfer function estimation (`tfest`) in MATLAB.
-3. **State Observation:** 3-state **Luenberger observer** fusing wheel encoder angles and IMU measurements (gyroscope + accelerometer) to reconstruct the unmeasured pitch angle $\theta$ (full-rank observability $\operatorname{rank}(\mathcal{O}) = 3$).
+3. **State Observation:** 3-state **Luenberger observer** fusing wheel encoder angles and IMU measurements (gyroscope + accelerometer) to reconstruct the unmeasured pitch angle $\theta$ (full-rank observability $\mathrm{rank}(\mathcal{O}) = 3$).
 4. **State-Feedback Control & Trajectory Tracking:** Eigenstructure **pole placement** benchmarked against **LQR** optimal control in MATLAB/Simulink under actuator voltage saturation ($\pm 12\text{ V}$), extended with acceleration- and velocity-bounded trajectory tracking ($V_{\max} = 0.10\text{ m/s}$, $A_{\max} = 0.25\text{ m/s}^2$).
 5. **Real-Time Embedded Deployment:** 200 Hz (`5 ms`) control loop on Arduino communicating over 400 kHz I2C (Qwiic Mux) with a **BMI270** 6-axis IMU and dual **AS5600** magnetic rotary encoders, streaming live state telemetry over WiFi.
 
@@ -24,35 +24,42 @@ A two-wheeled Segway-type robot is a naturally unstable, underactuated inverted 
 
 ### Axial Linearized State-Space Model
 
-With state vector $x = [p,\; u,\; \theta,\; \omega]^\top$ (longitudinal position, longitudinal velocity, pitch angle, pitch rate) and summed motor voltage input $U = U_l + U_r$:
+With state vector $x = [p, u, \theta, \omega]^\top$ (longitudinal position, longitudinal velocity, pitch angle, pitch rate) and summed motor voltage input $U = U_l + U_r$:
 
-$$N \begin{bmatrix} \dot{u} \\ \dot{\theta} \\ \dot{\omega} \end{bmatrix} = A_a \begin{bmatrix} u \\ \theta \\ \omega \end{bmatrix} + B_b U, \qquad \dot{x} = A x + B U$$
+```math
+N \begin{bmatrix} \dot{u} \\ \dot{\theta} \\ \dot{\omega} \end{bmatrix} = A_a \begin{bmatrix} u \\ \theta \\ \omega \end{bmatrix} + B_b U, \qquad \dot{x} = A x + B U
+```
 
 Open-loop eigenvalues on the nominal model confirm the unstable inverted pendulum pole:
-$$\operatorname{Sp}(A) = \{0,\; -77.603,\; -3.2404,\; +3.2692\}$$
+
+```math
+\mathrm{Sp}(A) = \lbrace 0,\; -77.603,\; -3.2404,\; +3.2692 \rbrace
+```
 
 ### Luenberger State Observer
 
-Defining the auxiliary state $z = [p,\; \xi,\; \theta]^\top$ with $\xi = u + d_i \omega$ and encoder output $\bar{y}_e = \frac{\alpha_l + \alpha_r}{2} = \frac{p}{\rho} - \theta$:
+Defining the auxiliary state $z = [p, \xi, \theta]^\top$ with $\xi = u + d_i \omega$ and encoder output $\bar{y}_e = \frac{\alpha_l + \alpha_r}{2} = \frac{p}{\rho} - \theta$:
 
-$$\dot{\hat{z}} = A_{\text{obs}}\hat{z} + B_{\text{obs}} v + L_{\text{obs}}\left(\bar{y}_e - C_{\text{obs}}\hat{z}\right), \qquad u = \hat{\xi} - d_i \omega$$
+```math
+\dot{\hat{z}} = A_{\text{obs}}\hat{z} + B_{\text{obs}} v + L_{\text{obs}}\left(\bar{y}_e - C_{\text{obs}}\hat{z}\right), \qquad u = \hat{\xi} - d_i \omega
+```
 
-with observer poles placed faster than the closed-loop dynamics at $\operatorname{Sp}(A_{\text{obs}} - L_{\text{obs}} C_{\text{obs}}) = \{-6,\; -9,\; -15\}$.
+with observer poles placed faster than the closed-loop dynamics at $\mathrm{Sp}(A_{\text{obs}} - L_{\text{obs}} C_{\text{obs}}) = \lbrace -6, -9, -15 \rbrace$.
 
 ---
 
 ## Controller Comparison & Hardware Results
 
-| Strategy | Closed-Loop Poles $\operatorname{Sp}(A - BK)$ (Nominal Model) | Behavior |
+| Strategy | Closed-Loop Poles $\mathrm{Sp}(A - BK)$ (Nominal Model) | Behavior |
 | :--- | :--- | :--- |
-| **Open Loop** | $\{0,\; -77.60,\; -3.24,\; +3.27\}$ | Unstable upright equilibrium |
-| **Pole Placement** ($\zeta = 0.7,\; \omega_n \approx 4.3\text{ rad/s}$) | $\{-77.60,\; -3.00 \pm 3.06i,\; -0.03\}$ | Settling time $< 3\text{ s}$, moderate overshoot in Simulink |
-| **LQR** ($Q = I_4,\; R = 1$) | $\{-78.22,\; -3.24 \pm 0.18i,\; -0.057\}$ | Highly damped, minimal overshoot, conservative actuator effort |
+| **Open Loop** | $\lbrace 0, -77.60, -3.24, +3.27 \rbrace$ | Unstable upright equilibrium |
+| **Pole Placement** ($\zeta = 0.7, \omega_n \approx 4.3\text{ rad/s}$) | $\lbrace -77.60, -3.00 \pm 3.06i, -0.03 \rbrace$ | Settling time $< 3\text{ s}$, moderate overshoot in Simulink |
+| **LQR** ($Q = I_4, R = 1$) | $\lbrace -78.22, -3.24 \pm 0.18i, -0.057 \rbrace$ | Highly damped, minimal overshoot, conservative actuator effort |
 | **Hardware-Tuned $K_{\text{hw}}$** | `[-1.5, -80.0, -80.482, -17.112]` | Fast disturbance rejection on physical robot compensating unmodeled friction, sensor noise, and microcontroller latency |
 
 ### Experimental Hardware Performance (200 Hz Telemetry)
 
-* **Disturbance rejection:** Under repeated manual impulses between $t = 8\text{ s}$ and $t = 18\text{ s}$, the robot recovers upright stability without divergence, keeping pitch oscillations within **$\vert{}\theta\vert{} < 0.05\text{ rad}$ ($\approx 2.9^\circ$)** and settling time **$< 3\text{ s}$**.
+* **Disturbance rejection:** Under repeated manual impulses between $t = 8\text{ s}$ and $t = 18\text{ s}$, the robot recovers upright stability without divergence, keeping pitch oscillations within **$\lvert \theta \rvert < 0.05\text{ rad}$ ($\approx 2.9^\circ$)** and settling time **$< 3\text{ s}$**.
 * **Real-time telemetry:**
 
 ![Real-Time Telemetry under External Disturbances](assets/telemetry_disturbance.png)
